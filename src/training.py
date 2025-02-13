@@ -37,6 +37,18 @@ class Train:
         self.pwd = os.getcwd()
         self.dataset_path = None
 
+        # Prepare folder to store the training networks and the results
+        self.nn_weights_path = os.path.join(self.pwd, "nn_weights", self.model_label)
+        self.results_path = os.path.join(self.pwd, "results", self.model_label)
+        os.makedirs(self.nn_weights_path, exist_ok=True)
+        os.makedirs(self.results_path, exist_ok=True)
+
+        self.nn_weights_path = os.path.join(self.nn_weights_path, self.dataset_name)
+        os.makedirs(self.nn_weights_path)
+        self.results_path = os.path.join(self.results_path, self.dataset_name)
+        os.makedirs(self.results_path)
+
+
     @classmethod
     def from_json(cls, json_file):
         with open(json_file, "r") as file:
@@ -50,16 +62,16 @@ class Train:
         # Load params min and params max
         self.params_min = np.load(os.path.join(self.dataset_path, "params_min.npy")) 
         self.params_max = np.load(os.path.join(self.dataset_path, "params_max.npy")) 
-        # Load monitoring times
-        self.monitoring_times = np.load(os.path.join(self.dataset_path, "monitoring_times.npy"))
+        # Load monitoring times (last monitoring time is ignored)
+        self.monitoring_times = np.load(os.path.join(self.dataset_path, "monitoring_times.npy"))[:-1]
         # Load funding spread values for mva computation
         self.cumfs = np.load(os.path.join(self.dataset_path, "funding_spread_discounts.npy"))
         # Load training set
         self.x_train = np.load(os.path.join(self.dataset_path, "Xtrain.npy"))
-        self.y_train = np.load(os.path.join(self.dataset_path, "IMtrain.npy"))
+        self.y_train = np.load(os.path.join(self.dataset_path, "IMtrain.npy"))[:,:-1]
         # Load validation set
         self.x_val = np.load(os.path.join(self.dataset_path, "Xval.npy"))
-        self.y_val = np.load(os.path.join(self.dataset_path, "DIMval.npy"))
+        self.y_val = np.load(os.path.join(self.dataset_path, "DIMval.npy"))[:,:-1]
         self.mva = np.load(os.path.join(self.dataset_path, "MVA.npy"))
         print("Done!")
         return
