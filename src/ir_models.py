@@ -57,7 +57,7 @@ class HullWhite(AffineInterestRateModel):
         self.a = a
         self.vol = vol
         self.Y = Y
-        self.x0 = np.zeros_like(self.vol)
+        self.x0 = np.zeros_like(self.vol) + self.alpha(0.) # Here x0 = r0
 
         super().__init__()
     

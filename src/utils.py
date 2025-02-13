@@ -1,23 +1,12 @@
-import numpy as np
-from scipy.interpolate import interp1d
+import time
 
 
-
-def buildP(tenors:np.ndarray, ys:np.ndarray)->callable:
-    return interp1d(tenors, np.exp(-tenors*ys), copy=False)
-
-def computeSensitivities(
-    t:float,
-    tenors:np.ndarray,
-    ys:np.ndarray,
-    V:np.ndarray,
-    pricer:callable,
-    S:np.ndarray,
-    BP:float=1.e-4
-)->None:
-    for k in range(1, tenors.size):
-        ys[:, k] += BP
-        P = buildP(tenors, ys)
-        S[:, k-1] = pricer(P, t) - V
-        ys[:, k] -= BP
-    return None
+def timer(func):
+    def wrapper(*args,**kwargs):
+        start_time = time.perf_counter()
+        result = func(*args,**kwargs)
+        end_time = time.perf_counter()
+        elpased_time = end_time - start_time
+        print(f"Function '{func.__name__}' took {elpased_time:.6f} seconds.")
+        return result
+    return wrapper

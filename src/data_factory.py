@@ -2,7 +2,6 @@ import os
 import time
 import json
 from copy import deepcopy
-from itertools import repeat
 from multiprocessing import Pool
 
 import numpy as np
@@ -11,6 +10,7 @@ from scipy.interpolate import interp1d
 
 # from src import HullWhite, NelsonSiegel, IRS, InitialMargin
 from src import *
+from src.utils import timer
 
 
 class DataGen:
@@ -92,6 +92,9 @@ class DataGen:
         self.data_dir = os.path.join(self.data_dir, self.model_label, "dataset"+"-"+self.dataset_name)
         os.makedirs(self.data_dir)
 
+        # Save params min and params max
+        np.save(os.path.join(self.data_dir, "params_min.npy"),self.pmin)
+        np.save(os.path.join(self.data_dir, "params_max.npy"),self.pmax)
         # Save monitoring times
         np.save(os.path.join(self.data_dir, "monitoring_times.npy"), self.monitoring_times)
         # Generate and save funding spread values at monitoring times
@@ -182,6 +185,7 @@ class DataGen:
             self.check_swap_maturities(portfolio,self.monitoring_times[n])
         return DIM
 
+    @timer
     def gen_train_set(self):
         print(f"Starting generation of the training set...")
         X = self.generate_lhs_samples(self.num_samples_train)
@@ -239,6 +243,7 @@ class DataGen:
         print(f"Done!")
         return
 
+    @timer
     def gen_val_set(self):
         print(f"Starting generation of validation set...")
         X = self.generate_lhs_samples(self.num_samples_val)
@@ -262,11 +267,3 @@ class DataGen:
         print(f"Done!")
         return
 
-
-
-if __name__ == "__main__":
-    filename = "/home/joel/codes/DynamicalInitialMarginNN_serverA100/hull_white_data.json"
-    obj = DataGen.from_json(filename)
-    print(obj.params_max)
-    print(obj.irs_params)
-    
