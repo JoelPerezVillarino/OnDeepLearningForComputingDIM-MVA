@@ -82,7 +82,7 @@ class CIR(AffineInterestRateModel):
     # Refers to CIR++ model explained in Brigo, Mercurio.
     # Remember, for the valuation of zcb in CIR++, i only need to provide the x_t st
     # r_t = x_t + phi_t
-    def __init__(self, theta:np.ndarray, kappa:np.ndarray, vol:np.ndarray, x0:np.ndarray, Y:TermStruct):
+    def __init__(self, kappa:np.ndarray, theta:np.ndarray, vol:np.ndarray, x0:np.ndarray, Y:TermStruct):
         self.theta = theta
         self.kappa = kappa
         self.vol = vol
@@ -118,11 +118,11 @@ class CIR(AffineInterestRateModel):
         return out
     
     def __aux_den(self, t:float, T:float):
-        return 2*self.h+(self.kappa+self.h)*np.expm1(self.h(T-t))
+        return 2*self.h+(self.kappa+self.h)*np.expm1(self.h*(T-t))
 
     def __A(self, t:float, T:float):
         num = 2.*self.h*np.exp(0.5*(self.kappa+self.h)*(T-t))
-        return np.power(num/self.__aux_den(t,T),2.*self.kappa*self.theta/self.sigma**2)
+        return np.power(num/self.__aux_den(t,T),2.*self.kappa*self.theta/self.vol**2)
     
     def B(self, t:float, T:float):
         return 2.*np.expm1(self.h*(T-t))/self.__aux_den(t,T)

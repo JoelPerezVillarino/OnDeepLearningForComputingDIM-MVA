@@ -2,6 +2,7 @@ import os
 import time
 import json
 from copy import deepcopy
+from itertools import repeat
 from multiprocessing import Pool
 
 import numpy as np
@@ -43,7 +44,6 @@ class DataGen:
         self.lC = 0 # Default intensity C
         self.rB = 0.4 # Recovery rate B
         self.sI = 0. # Spread on IM
-        self.funding_spread_fun = lambda tau: np.exp(-(self.lB+self.lC)*tau)
 
         # --------------------------- Input values ----------------------------------
         # Model values
@@ -78,11 +78,16 @@ class DataGen:
             [v for v in self.params_max.values()]
         )
 
-        self.num_swaps = len(self.irs_params)
-        self.portfolio = [IRS(**self.irs_params[key]) for key in self.irs_params]
+        if all(isinstance(value, dict) for value in self.irs_params.values()):
+            self.num_swaps = len(self.irs_params)
+            self.portfolio = [IRS(**self.irs_params[key]) for key in self.irs_params]
+            self.tend = max(swap["maturity"] for swap in self.irs_params.values())
+        else:
+            self.num_swaps = 1
+            self.portfolio = [IRS(**self.irs_params)]
+            self.tend = self.irs_params["maturity"]
         # Handle time grid
-        self.tend = max(swap["maturity"] for swap in self.irs_params.values())
-        self.num_monitoring_times = int((self.tend-self.t0)/self.dt)+1
+        self.num_monitoring_times = int((self.tend-self.t0)/self.time_step)+1
         self.monitoring_times = np.linspace(self.t0, self.tend, self.num_monitoring_times)
 
         # Manage folder for saving data
@@ -142,7 +147,8 @@ class DataGen:
         times = self.monitoring_times[:-1]
         dts = times[1:]-times[:-1]
         cte = (1.-self.rB)*self.lB
-        cumfs = cte*np.cumprod(self.funding_spread_fun(dts))
+        funding_spread_fun = lambda tau: np.exp(-(self.lB+self.lC)*tau)
+        cumfs = cte*np.cumprod(funding_spread_fun(dts))
         cumfs = np.concatenate([cte*np.ones((1,1)),cumfs[:,None]]).squeeze()
         return cumfs
 
@@ -150,10 +156,11 @@ class DataGen:
         # Compute DIM path for a given a market state x
         ones = np.ones((self.num_MC_paths,))
         if self.model_label == "hull_white":
-            C = NelsonSiegel(x[0]*ones,x[1]*ones,x[2]*ones,self.LAMB*ones)
-            ir_model = HullWhite(x[3]*ones, x[4]*ones, C)
+            C = NelsonSiegel(b0=x[0]*ones,b1=x[1]*ones,b2=x[2]*ones,lamb=self.LAMB*ones)
+            ir_model = HullWhite(a=x[3]*ones, vol=x[4]*ones, Y=C)
         elif self.model_label == "cir":
-            C = NelsonSiegel(x[0]*ones,x[1]*ones,x[2]*ones,self.LAMB*ones)
+            C = NelsonSiegel(b0=x[0]*ones,b1=x[1]*ones,b2=x[2]*ones,lamb=self.LAMB*ones)
+            ir_model = CIR(kappa=x[3]*ones,theta=x[4]*ones,vol=x[5]*ones,x0=x[6]*ones,Y=C)
 
         # Initialize vars
         r = np.zeros((self.num_MC_paths,)) 
@@ -166,9 +173,9 @@ class DataGen:
         ys = ir_model.computeYieldPoints(self.monitoring_times[0],ir_model.x0,self.tenors)
         P = self.build_discount_curve(ys)
         if self.num_swaps == 1: # One swap case, we work with no ATM swap
-            self.portfolio[0].setRateATM(P,x[-1])
+            portfolio[0].setRateATM(P,x[-1])
         else: # ATM swap
-            for swap in self.portfolio: swap.setRateATM(P)
+            for swap in portfolio: swap.setRateATM(P)
 
         V = self.eval_portfolio(portfolio,P,self.monitoring_times[0])
         self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[0],ys,V,S)
@@ -191,11 +198,11 @@ class DataGen:
         X = self.generate_lhs_samples(self.num_samples_train)
         # Load term struct and ir model
         if self.model_label == "hull_white":
-            C = NelsonSiegel(X[:,0], X[:,1], X[:,2], self.LAMB*np.ones((self.num_samples_train,)))
-            ir_model = HullWhite(X[:,3], X[:,4], C)
+            C = NelsonSiegel(b0=X[:,0], b1=X[:,1], b2=X[:,2], lamb=self.LAMB*np.ones((self.num_samples_train,)))
+            ir_model = HullWhite(a=X[:,3], vol=X[:,4], Y=C)
         elif self.model_label == "cir":
-            # Write later
-            C = NelsonSiegel(X[:,0], X[:,1], X[:,2], self.LAMB*np.ones((self.num_samples_train,)))
+            C = NelsonSiegel(b0=X[:,0], b1=X[:,1], b2=X[:,2], lamb=self.LAMB*np.ones((self.num_samples_train,)))
+            ir_model = CIR(kappa=X[:,3],theta=X[:,4],vol=X[:,5],x0=X[:,6],Y=C)
 
         # Initialize vars
         r = np.zeros((self.num_samples_train,)) # Array short rate
@@ -239,9 +246,13 @@ class DataGen:
         # Save generated data
         np.save(os.path.join(self.data_dir, "Xtrain.npy"), X)
         np.save(os.path.join(self.data_dir, "IMtrain.npy"), IM)
-        self.clear_swap_status()
+        self.clear_swap_status(self.portfolio)
         print(f"Done!")
         return
+    
+    @staticmethod
+    def worker_function(instance, X, portfolio, rng):
+        return instance.generate_DIM_path(X, portfolio, rng)
 
     @timer
     def gen_val_set(self):
@@ -251,19 +262,23 @@ class DataGen:
         child_rngs = rng.spawn(self.num_samples_val) # Create child rng for parallel computation
         # duplicate portfolios to avoid issues with multiprocessing
         duplicated_portfolios = [deepcopy(self.portfolio) for _ in range(self.num_samples_val)]
+
         with Pool(processes=self.num_processes) as p: # Multiprocessing DIM computation
-            DIM = p.starmap(
-                self.generate_DIM_path,
-                zip(X, duplicated_portfolios, child_rngs)
-            )
+            # DIM = p.starmap(
+            #     self.generate_DIM_path,
+            #     zip(X, duplicated_portfolios, child_rngs)
+            # )
+            DIM = p.starmap(DataGen.worker_function, zip(repeat(self),X, duplicated_portfolios, child_rngs))
         DIM = np.array(DIM)
         # MVA computation with funding spread
-        fdDIM = DIM * self.cumfs 
-        MVA = np.sum(fdDIM[:,1:],axis=1)*self.time_step
+        fdDIM = DIM[:,1:] * self.cumfs 
+        MVA = np.sum(fdDIM,axis=1)*self.time_step
         # Save generated data
         np.save(os.path.join(self.data_dir, "Xval.npy"),X)
         np.save(os.path.join(self.data_dir, "DIMval.npy"),DIM)
         np.save(os.path.join(self.data_dir, "MVA.npy"),MVA)
+        self.clear_swap_status(self.portfolio)
         print(f"Done!")
         return
+
 

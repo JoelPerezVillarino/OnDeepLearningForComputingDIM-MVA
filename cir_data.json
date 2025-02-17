@@ -1,27 +1,31 @@
 {
-    "model_label": "hull_white",
+    "model_label": "cir",
     "dataset_name": "1Yr5YrSwap",
     "params_min": {
         "b0": -0.005,
         "b1": 0.0,
         "b2": 0.0,
-        "a": 0.01,
-        "vol": 0.0005,
+        "kappa": 2.5,
+        "theta": 0.01,
+        "vol": 0.01,
+        "x0": 0.01,
         "spread": -0.001
     },
     "params_max": {
         "b0": 0.05,
         "b1": 0.01,
         "b2": 0.01,
-        "a": 0.05,
-        "vol": 0.015,
+        "kappa": 7.5,
+        "theta": 0.05,
+        "vol": 0.1,
+        "x0":0.05,
         "spread": 0.001
     },
     "irs_params": {
         "start_time": 1,
         "maturity": 6,
-        "fixed_tenor":0.5,
-        "float_tenor":0.25,
+        "fixed_tenor": 0.5,
+        "float_tenor": 0.25,
         "K": 0,
         "is_payer": 1,
         "notional": 100
@@ -31,5 +35,4 @@
     "num_samples_val": 512,
     "num_MC_paths": 2097152,
     "num_processes": 8
-
 }

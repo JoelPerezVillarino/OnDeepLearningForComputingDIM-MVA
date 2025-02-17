@@ -43,3 +43,8 @@ def convergence_num_train_samples(model_label, dataset_name, alpha=0.05, save=Tr
     # Add plot!
 
     return
+
+
+def compute_errors_per_param(model_label, dataset_name, num_nn_layers=3, num_nn_units=256):
+
+    return

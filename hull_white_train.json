@@ -4,14 +4,7 @@
     "network_params": {
         "num_layers": 3,
         "num_units": 256,
-        "activation": "relu",
         "preprocessing_layer": "normalization"
-    },
-    "opt_config": {
-        "opt": "adam",
-        "lr": 1e-3,
-        "beta_1":0.9,
-        "beta_2":0.999
     },
     "early_stopping_config": {
         "monitor": "val_loss",

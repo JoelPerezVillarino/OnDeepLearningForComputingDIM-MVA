@@ -5,20 +5,20 @@ class IRS:
 
     def __init__(
         self, 
-        startTime:float,
+        start_time:float,
         maturity:float,
-        fixedTenor:float,
-        floatTenor:float,
+        fixed_tenor:float,
+        float_tenor:float,
         K:np.ndarray=None,
-        isPayer:bool=True,
+        is_payer:bool=True,
         notional:float=100.,
     ) -> None:
-        self.startTime = startTime
+        self.startTime = start_time
         self.T = maturity
-        self.fixedTenor = fixedTenor 
-        self.floatTenor = floatTenor
+        self.fixedTenor = fixed_tenor 
+        self.floatTenor = float_tenor
         self.K = None if K is None else K
-        self.isPayer = True if isPayer == 1 else False
+        self.isPayer = True if is_payer == 1 else False
         self.alpha = 1. if self.isPayer else -1.
         self.N = notional
 
@@ -61,6 +61,7 @@ class IRS:
     
     def clearStatus(self):
         self.lastCoupon = None
+        self.K = None
     
     def getMaturity(self):
         return self.T

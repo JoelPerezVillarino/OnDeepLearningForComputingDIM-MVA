@@ -109,53 +109,23 @@ class Train:
     
     def load_model_config(self):
         # Preprocessing layer
-        if self.network_params["preprocessing_layer"] == "normalization":
-            preprocessing_layer = Normalization()
-            preprocessing_layer.load_bounds(self.params_min, self.params_max)
-            kernel_init = "glorot_uniform"
-        elif self.network_params["preprocessing_layer"] == "standarization":
-            preprocessing_layer = Standarization()
-            preprocessing_layer.adapt(self.x_train)
-            preprocessing_layer.save_params(self.dataset_path)
-            kernel_init = "glorot_normal"
-        else:
-            preprocessing_layer = None
-            kernel_init = "glorot_uniform"
-        
-        # optimizer
-        if self.opt_config["opt"] == "adam":
-            opt = tf.keras.optimizers.Adam(
-                self.opt_config["lr"], 
-                self.opt_config["beta_1"],
-                self.opt_config["beta_2"]
-            )
-        elif self.opt_config["opt"] == "sgd":
-            opt = tf.keras.optimizers.SGD(self.opt_config["lr"])
-        elif self.opt_config["opt"] == "adam_w":
-            opt = tf.keras.optimizers.AdamW(
-                self.opt_config["lr"],
-                self.opt_config["weight_dacay"],
-                self.opt_config["beta_1"],
-                self.opt_config["beta_2"]
-            )
+        preprocessing_layer = Normalization()
+        preprocessing_layer.load_bounds(self.params_min, self.params_max)
+        kernel_init = "glorot_uniform"
         
         config = {
             "units": self.network_params["num_units"],
             "num_layers": self.network_params["num_layers"],
-            "activation": [self.network_params["activation"], "linear"],
-            "num_inputs": self.num_inputs,
             "num_outputs": self.num_outputs,
             "kernel_init": kernel_init,
-            "opt": opt,
             "preprocessing_layer": preprocessing_layer,
-            "regularization": None
         }
 
         return config
     
     def run(self):
         self.load_dataset()
-        config = self.load_model_config()
+        nn_config = self.load_model_config()
         # Defining the number of training samples employed
         m0 = 10 # Min dataset size: 2**10
         size_set = [2**i for i in range(m0,int(np.log2(self.num_train_samples))+1)]
@@ -177,7 +147,12 @@ class Train:
                 x_train_sample = self.x_train[idx_samples]
                 y_train_sample = self.y_train[idx_samples]
                 # Load and train model
-                model = loadSequentialModel(**config)
+                model = loadSequentialModel(**nn_config)
+                model.compile(
+                    opt=tf.keras.optimizers.Adam(lr=1e-3),
+                    loss="mse",
+                    metrics=["mse","mae"]
+                )
                 callbacks = self.load_training_callbacks()
                 history = model.fit(
                     x_train_sample, y_train_sample, epochs=self.epochs,
