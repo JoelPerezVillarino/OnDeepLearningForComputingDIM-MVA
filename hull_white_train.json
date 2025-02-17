@@ -1,0 +1,32 @@
+{
+    "model_label": "hull_white",
+    "dataset_name": "1Yr5YrSwap",
+    "network_params": {
+        "num_layers": 3,
+        "num_units": 256,
+        "activation": "relu",
+        "preprocessing_layer": "normalization"
+    },
+    "opt_config": {
+        "opt": "adam",
+        "lr": 1e-3,
+        "beta_1":0.9,
+        "beta_2":0.999
+    },
+    "early_stopping_config": {
+        "monitor": "val_loss",
+        "min_delta": 7e-7,
+        "patience": 200,
+        "retore_best_weights": 1
+    },
+    "lr_schedule_config": {
+        "monitor": "val_loss",
+        "factor": 0.5,
+        "patience": 50,
+        "threshold": 1,
+        "min_lr": 1e-6
+    },
+    "num_trainings": 10,
+    "epochs": 2e3,
+    "batch_size": 4096
+}

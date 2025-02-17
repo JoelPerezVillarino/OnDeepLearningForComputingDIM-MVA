@@ -25,8 +25,8 @@ class Standarization(tf.keras.layers.Layer):
         self.stds_ = tf.convert_to_tensor(stds)
     
     def save_params(self, path):
-        np.save(os.path.join(path, "mean.npy"), self.means_.numpy())
-        np.save(os.path.join(path, "std.npy"), self.stds_.numpy())
+        np.save(os.path.join(path, "Xmean.npy"), self.means_.numpy())
+        np.save(os.path.join(path, "Xstd.npy"), self.stds_.numpy())
     
     def call(self, p):
         return (p - self.means_) / (self.stds_+tf.keras.backend.epsilon())
