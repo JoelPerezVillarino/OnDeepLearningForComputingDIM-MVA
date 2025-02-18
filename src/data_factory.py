@@ -1,8 +1,7 @@
 import os
-import time
 import json
 from copy import deepcopy
-from itertools import repeat
+# from itertools import repeat
 from multiprocessing import Pool
 
 import numpy as np
@@ -118,7 +117,7 @@ class DataGen:
     def eval_portfolio(self, portfolio:list, d_curve:callable, t:float):
         if len(portfolio)>1:
             return np.sum([swap(d_curve,t) for swap in portfolio],axis=0)
-        return portfolio[0](d_curve, t)
+        return portfolio[0](d_curve,t)
     
     def compute_portfolio_sensitivities(self, portfolio:list, t:float, ys:np.ndarray, V:np.ndarray, S:np.ndarray):
         for k in range(1, self.tenors.size):
@@ -161,7 +160,6 @@ class DataGen:
         elif self.model_label == "cir":
             C = NelsonSiegel(b0=x[0]*ones,b1=x[1]*ones,b2=x[2]*ones,lamb=self.LAMB*ones)
             ir_model = CIR(kappa=x[3]*ones,theta=x[4]*ones,vol=x[5]*ones,x0=x[6]*ones,Y=C)
-
         # Initialize vars
         r = np.zeros((self.num_MC_paths,)) 
         V = np.zeros((self.num_MC_paths,))
@@ -173,23 +171,27 @@ class DataGen:
         ys = ir_model.computeYieldPoints(self.monitoring_times[0],ir_model.x0,self.tenors)
         P = self.build_discount_curve(ys)
         if self.num_swaps == 1: # One swap case, we work with no ATM swap
-            portfolio[0].setRateATM(P,x[-1])
+            self.portfolio[0].setRateATM(P,x[-1]*ones)
         else: # ATM swap
             for swap in portfolio: swap.setRateATM(P)
 
-        V = self.eval_portfolio(portfolio,P,self.monitoring_times[0])
-        self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[0],ys,V,S)
+        V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[0])
+        self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[0],ys,V,S)
         DIM[0] = np.mean(self.im_engine.compute_initial_margin(S))
+        print(f"DIM[{0}] = {DIM[0]:.5f}")
         # Forward times
+        r = ir_model.x0
         for n in range(1,self.num_monitoring_times-1):
             r = ir_model.shortRateSimulStep(self.monitoring_times[n-1],self.monitoring_times[n],r,rng)
             discount *= np.exp(-r*(self.monitoring_times[n]-self.monitoring_times[n-1]))
             ys = ir_model.computeYieldPoints(self.monitoring_times[n],r,self.tenors)
+            P = self.build_discount_curve(ys)
             for swap in portfolio: swap.checkStatus(P, self.monitoring_times[n])
-            V = self.eval_portfolio(portfolio,P,self.monitoring_times[n])
-            self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[n],ys,V,S)
-            DIM[n] = np.mean(self.im_engine.compute_initial_margin(S))
-            self.check_swap_maturities(portfolio,self.monitoring_times[n])
+            V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[n])
+            self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[n],ys,V,S)
+            DIM[n] = np.mean(self.im_engine.compute_initial_margin(S)*discount)
+            print(f"DIM[{n}] = {DIM[n]:.5f}")
+            self.check_swap_maturities(self.portfolio,self.monitoring_times[n])
         return DIM
 
     @timer
@@ -264,11 +266,11 @@ class DataGen:
         duplicated_portfolios = [deepcopy(self.portfolio) for _ in range(self.num_samples_val)]
 
         with Pool(processes=self.num_processes) as p: # Multiprocessing DIM computation
-            # DIM = p.starmap(
-            #     self.generate_DIM_path,
-            #     zip(X, duplicated_portfolios, child_rngs)
-            # )
-            DIM = p.starmap(DataGen.worker_function, zip(repeat(self),X, duplicated_portfolios, child_rngs))
+            DIM = p.starmap(
+                self.generate_DIM_path,
+                zip(X, duplicated_portfolios, child_rngs)
+            )
+            # DIM = p.starmap(DataGen.worker_function, zip(repeat(self),X, duplicated_portfolios, child_rngs))
         DIM = np.array(DIM)
         # MVA computation with funding spread
         fdDIM = DIM[:,1:] * self.cumfs 

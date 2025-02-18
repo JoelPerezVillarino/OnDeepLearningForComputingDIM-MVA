@@ -74,7 +74,7 @@ class HullWhite(AffineInterestRateModel):
         return -np.expm1(-self.a*(T-t))/self.a
     
     def A(self, t:float, T:float):
-        temp = self.B(t,T)*self.Y.forward(0,t)+0.25*np.power(self.vol*self.B(t,T),2)*np.expm1(-2.*self.a*t)/self.a
+        temp = self.B(t,T)*self.Y.forward(t)+0.25*np.power(self.vol*self.B(t,T),2)*np.expm1(-2.*self.a*t)/self.a
         return self.Y.discounts(T)/self.Y.discounts(t)*np.exp(temp)
 
 

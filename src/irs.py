@@ -42,7 +42,6 @@ class IRS:
             receiverTimes = self.floatLegTimes[idx]
             temp2 = P(receiverTimes[0]-t) - P(receiverTimes[-1]-t)
         else:
-            # No se si el floatTenor es necesario....
             temp2 = self.lastCoupon * P(self.floatLegTimes[-1]-t) * self.floatTenor
         return self.N * self.alpha * (temp2 - temp1)
 
