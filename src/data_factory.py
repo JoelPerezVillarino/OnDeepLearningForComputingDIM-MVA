@@ -190,7 +190,7 @@ class DataGen:
             V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[n])
             self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[n],ys,V,S)
             DIM[n] = np.mean(self.im_engine.compute_initial_margin(S)*discount)
-            print(f"DIM[{n}] = {DIM[n]:.5f}")
+            print(f"DIM[{n}] = {DIM[n]:5f}")
             self.check_swap_maturities(self.portfolio,self.monitoring_times[n])
         return DIM
 
