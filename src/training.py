@@ -3,6 +3,8 @@ import json
 import numpy as np
 import tensorflow as tf
 
+tf.keras.backend.set_floatx("float64")
+
 from src.nn import loadSequentialModel
 from src.nn import Normalization, Standarization, AutomaticLrScheduler
 from src.utils import timer
@@ -15,7 +17,6 @@ class Train:
         model_label=None,
         dataset_name=None,
         network_params=None,
-        opt_config=None,
         early_stopping_config=None,
         lr_schedule_config=None,
         num_trainings=None,
@@ -25,7 +26,6 @@ class Train:
         self.model_label = model_label
         self.dataset_name = dataset_name
         self.network_params = network_params
-        self.opt_config = opt_config
         self.early_stopping_config = early_stopping_config
         self.lr_schedule_config = lr_schedule_config
         self.num_trainings = num_trainings
@@ -33,8 +33,7 @@ class Train:
         self.batch_size = batch_size
 
         if (self.dataset_name is None or self.network_params is None or self.epochs is None\
-            or self.num_trainings is None or self.model_label is None or self.batch_size is None\
-            or self.opt_config is None):
+            or self.num_trainings is None or self.model_label is None or self.batch_size is None):
             raise ValueError('Class not properly initialized')
         
         self.pwd = os.getcwd()
@@ -149,7 +148,7 @@ class Train:
                 # Load and train model
                 model = loadSequentialModel(**nn_config)
                 model.compile(
-                    opt=tf.keras.optimizers.Adam(lr=1e-3),
+                    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
                     loss="mse",
                     metrics=["mse","mae"]
                 )

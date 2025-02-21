@@ -10,8 +10,7 @@ x_train = np.load(os.path.join(folder, "Xtrain.npy"))
 IM_train = np.load(os.path.join(folder, "IMtrain.npy"))
 DIM_val = np.load(os.path.join(folder, "DIMval.npy"))
 
-
 plt.figure(figsize=(12,8))
-# plt.plot(ts,IM_train.T)
-plt.plot(ts,DIM_val.T)
+plt.plot(ts,IM_train[1500:3001].T)
+# plt.plot(ts,DIM_val[:,:].T)
 plt.show()
