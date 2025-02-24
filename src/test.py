@@ -7,7 +7,7 @@ import tensorflow as tf
 from src.nn import loadSequentialModel, Normalization
 
 
-def convergence_num_train_samples(model_label, dataset_name, alpha=0.05, save=True):
+def convergence_num_train_samples(model_label, dataset_name, alpha=0.05, save=True, plot=True):
     folder_path = os.path.join(os.getcwd(), "results", model_label, dataset_name)
     if not os.path.isdir(folder_path):
         raise ValueError("Folder with the results not found.")
@@ -44,7 +44,25 @@ def convergence_num_train_samples(model_label, dataset_name, alpha=0.05, save=Tr
         np.savetxt(os.path.join(folder_results, "rmse.dat"),data_rmse,header="num_samples\tmean\tbound\tonm1")
         np.savetxt(os.path.join(folder_results, "mva.dat"),data_mva,header="num_samples\tmean\tbound\tonm1")
     
-    # Add plot!
+    if plot:
+        fig = plt.figure(figsize=(12,8))
+        ax1 = fig.add_subplot(211)
+        ax1.set_title(f"RMSE")
+        ax1.set_xlabel("Nbr of samples")
+        ax1.set_xscale("log", base=2)
+        ax1.set_yscale("log", base=10)
+        ax1.errorbar(num_samples, mean_rmse, yerr=bound_rmse, fmt='o', color='blue', capsize=3, label='Mean')
+        ax1.plot(num_samples, oNm1_rmse, 'k--', label='O(1/sqrt(K))')
+
+        ax2 = fig.add_subplot(212)
+        ax2.set_title(f"MVA")
+        ax2.set_xlabel("Nbr of samples")
+        ax2.set_xscale("log", base=2)
+        ax2.set_yscale("log", base=10)
+        ax2.errorbar(num_samples, mean_mva, yerr=bound_mva, fmt='o', color='blue', capsize=3, label='Mean')
+        ax2.plot(num_samples, oNm1_mva, 'k--', label='O(1/sqrt(K))')
+        # ax2.plot(num_samples, mean_mva, label="mean")
+        plt.show()
 
     return
 
