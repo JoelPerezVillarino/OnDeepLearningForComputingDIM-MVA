@@ -1,5 +1,6 @@
 import os, gc
 import json
+import time
 import numpy as np
 import tensorflow as tf
 
@@ -134,6 +135,7 @@ class Train:
         val_mae = np.zeros((M, self.num_trainings))
         mva_error = np.zeros((M, self.num_trainings, self.num_val_samples))
         mean_mva_error = np.zeros((M, self.num_train_samples))
+        training_time = np.zeros((M, self.num_trainings))
         # Trainings
         x_train_sample = None
         y_train_sample = None
@@ -153,11 +155,13 @@ class Train:
                     metrics=["mse","mae"]
                 )
                 callbacks = self.load_training_callbacks()
+                start_time = time.perf_counter()
                 history = model.fit(
                     x_train_sample, y_train_sample, epochs=self.epochs,
                     batch_size=self.batch_size, validation_data=(self.x_val, self.y_val),
                     callbacks=callbacks
                 )
+                training_time[i,j] = time.perf_counter() - start_time
                 # Save model and relevant data (training)
                 fname_model = os.path.join(subfolder_i, f"model_{j}.h5")
                 model.save_weights(fname_model)
@@ -180,13 +184,15 @@ class Train:
                 del model
                 tf.keras.backend.clear_session()
                 gc.collect()
-        
+
         # Save results
+        training_time = np.mean(training_time, axis=1) 
         np.savetxt(os.path.join(self.results_path, "num_samples.txt"), np.array(size_set))
         np.savetxt(os.path.join(self.results_path, "mse.txt"), val_mse)
         np.savetxt(os.path.join(self.results_path, "mae.txt"), val_mae)
+        np.savetxt(os.path.join(self.results_path, "train_time.txt"), training_time)
         np.save(os.path.join(self.results_path, "mva_error.npy"), mva_error)
-        np.savetxt(os.path.join(self.results_path, "mean_mva_error.txt"), mean_mva_error)
+        np.save(os.path.join(self.results_path, "mean_mva_error.npy"), mean_mva_error)
 
 
         return
