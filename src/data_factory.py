@@ -178,19 +178,18 @@ class DataGen:
         V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[0])
         self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[0],ys,V,S)
         DIM[0] = np.mean(self.im_engine.compute_initial_margin(S))
-        print(f"DIM[{0}] = {DIM[0]:.5f}")
         # Forward times
         r = ir_model.x0
         for n in range(1,self.num_monitoring_times-1):
             r = ir_model.shortRateSimulStep(self.monitoring_times[n-1],self.monitoring_times[n],r,rng)
-            discount *= np.exp(-r*(self.monitoring_times[n]-self.monitoring_times[n-1]))
+            discount *= np.exp(-ir_model.fromXtoR(self.monitoring_times[n],r)\
+                            *(self.monitoring_times[n]-self.monitoring_times[n-1]))
             ys = ir_model.computeYieldPoints(self.monitoring_times[n],r,self.tenors)
             P = self.build_discount_curve(ys)
             for swap in portfolio: swap.checkStatus(P, self.monitoring_times[n])
             V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[n])
             self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[n],ys,V,S)
             DIM[n] = np.mean(self.im_engine.compute_initial_margin(S)*discount)
-            print(f"DIM[{n}] = {DIM[n]:5f}")
             self.check_swap_maturities(self.portfolio,self.monitoring_times[n])
         return DIM
 
@@ -235,7 +234,8 @@ class DataGen:
                 r,
                 rng
             )
-            discount *= np.exp(-r*(self.monitoring_times[n]-self.monitoring_times[n-1]))
+            discount *= np.exp(-ir_model.fromXtoR(self.monitoring_times[n],r)*\
+                            (self.monitoring_times[n]-self.monitoring_times[n-1]))
             ys = ir_model.computeYieldPoints(self.monitoring_times[n],r,self.tenors)
             P = self.build_discount_curve(ys)
             for swap in self.portfolio: swap.checkStatus(P,self.monitoring_times[n]) # Manage last coupon if needed

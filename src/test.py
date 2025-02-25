@@ -13,8 +13,9 @@ def convergence_num_train_samples(model_label, dataset_name, alpha=0.05, save=Tr
         raise ValueError("Folder with the results not found.")
     # Load data generated in training stage
     num_samples = np.loadtxt(os.path.join(folder_path,"num_samples.txt"))
+    training_time = np.loadtxt(os.path.join(folder_path, "train_time.txt"))
     mse = np.loadtxt(os.path.join(folder_path,"mse.txt"))
-    mva = np.loadtxt(os.path.join(folder_path,"mean_mva_error.txt"))
+    mva = np.load(os.path.join(folder_path,"mean_mva_error.npy"))
     rmse = np.sqrt(mse)
     oNm1 = 1. / np.sqrt(num_samples) # Expected sqrt convergence order
     # Compute mean per nbr of training samples
@@ -53,6 +54,12 @@ def convergence_num_train_samples(model_label, dataset_name, alpha=0.05, save=Tr
         ax1.set_yscale("log", base=10)
         ax1.errorbar(num_samples, mean_rmse, yerr=bound_rmse, fmt='o', color='blue', capsize=3, label='Mean')
         ax1.plot(num_samples, oNm1_rmse, 'k--', label='O(1/sqrt(K))')
+
+        ax12 = ax1.twinx() # Create a second y-axis sharing the same x-axis
+        ax12.plot(num_samples, training_time, color="red")
+        ax12.set_ylabel("Training time [s]")
+        ax12.set_yscale("log", base=10)
+        ax12.tick_params(axis="y", labelcolor="red")
 
         ax2 = fig.add_subplot(212)
         ax2.set_title(f"MVA")

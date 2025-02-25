@@ -19,6 +19,10 @@ class AffineInterestRateModel:
 
     def B(self, t:float, T:float):
         raise NotImplementedError("Subclass implementation!")
+    
+    def fromXtoR(self, t:float, x:np.ndarray):
+        # Fro deterministic shift extensions (r_t = x_t + phi(t))
+        raise NotImplementedError("Subclass implementation!")
 
     def zcb(self, t:float, T:float, r:np.ndarray):
         if np.isclose(t, T): return np.ones_like(r)
@@ -41,6 +45,9 @@ class VasicekModel(AffineInterestRateModel):
     def shortRateSimulStep(self, s:float, t:float, r0:np.ndarray, rng:np.random._generator.Generator)->np.ndarray:
         return r0 * np.exp(-self.kappa*(t-s))-self.theta*np.expm1(-self.kappa*(t-s)) +\
             np.sqrt(-0.5*self.vol**2/self.kappa*np.expm1(-2.*self.kappa*(t-s)))*rng.standard_normal(size=r0.size)
+    
+    def fromXtoR(self, t, x):
+        return x
     
     def B(self, t:float, T:float):
         return -np.expm1(-self.kappa*(T-t)) / self.kappa
@@ -76,6 +83,10 @@ class HullWhite(AffineInterestRateModel):
     def A(self, t:float, T:float):
         temp = self.B(t,T)*self.Y.forward(t)+0.25*np.power(self.vol*self.B(t,T),2)*np.expm1(-2.*self.a*t)/self.a
         return self.Y.discounts(T)/self.Y.discounts(t)*np.exp(temp)
+    
+    def fromXtoR(self, t, x):
+        # Here we are simulating the short rate itself
+        return x
 
 
 class CIR(AffineInterestRateModel):
@@ -138,6 +149,9 @@ class CIR(AffineInterestRateModel):
     def A(self, t:float, T:float):
         return self.Y.discounts(T)/self.Y.discounts(t)*self.__A(0,t)/self.__A(0,T)*np.exp(self.x0*(self.B(0,T)-self.B(0,t)))*\
             self.__A(t,T)
+    
+    def fromXtoR(self, t, x):
+        return x + self.alpha(t)
     
 
 
