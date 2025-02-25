@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import tensorflow as tf
 
+tf.keras.backend.set_floatx("float64")
+
 from src.nn import loadSequentialModel, Normalization
 
 

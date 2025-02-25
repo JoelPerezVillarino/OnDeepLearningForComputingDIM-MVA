@@ -171,12 +171,12 @@ class DataGen:
         ys = ir_model.computeYieldPoints(self.monitoring_times[0],ir_model.x0,self.tenors)
         P = self.build_discount_curve(ys)
         if self.num_swaps == 1: # One swap case, we work with no ATM swap
-            self.portfolio[0].setRateATM(P,x[-1]*ones)
+            portfolio[0].setRateATM(P,x[-1]*ones)
         else: # ATM swap
             for swap in portfolio: swap.setRateATM(P)
 
-        V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[0])
-        self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[0],ys,V,S)
+        V = self.eval_portfolio(portfolio,P,self.monitoring_times[0])
+        self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[0],ys,V,S)
         DIM[0] = np.mean(self.im_engine.compute_initial_margin(S))
         # Forward times
         r = ir_model.x0
@@ -187,10 +187,11 @@ class DataGen:
             ys = ir_model.computeYieldPoints(self.monitoring_times[n],r,self.tenors)
             P = self.build_discount_curve(ys)
             for swap in portfolio: swap.checkStatus(P, self.monitoring_times[n])
-            V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[n])
-            self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[n],ys,V,S)
+            V = self.eval_portfolio(portfolio,P,self.monitoring_times[n])
+            self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[n],ys,V,S)
             DIM[n] = np.mean(self.im_engine.compute_initial_margin(S)*discount)
-            self.check_swap_maturities(self.portfolio,self.monitoring_times[n])
+            self.check_swap_maturities(portfolio,self.monitoring_times[n])
+        self.clear_swap_status(portfolio)
         return DIM
 
     @timer
@@ -252,9 +253,9 @@ class DataGen:
         print(f"Done!")
         return
     
-    @staticmethod
-    def worker_function(instance, X, portfolio, rng):
-        return instance.generate_DIM_path(X, portfolio, rng)
+    # @staticmethod
+    # def worker_function(instance, X, portfolio, rng):
+    #     return instance.generate_DIM_path(X, portfolio, rng)
 
     @timer
     def gen_val_set(self):
