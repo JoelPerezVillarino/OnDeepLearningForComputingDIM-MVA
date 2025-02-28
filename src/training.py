@@ -179,7 +179,7 @@ class Train:
                 # Assuming equispaced time grid 
                 mva_pred = np.sum(y_pred[:,1:],axis=1)*(self.monitoring_times[1]-self.monitoring_times[0])
                 mva_error[i,j,:] = np.abs(self.mva - mva_pred)
-                mean_mva_error[i,j] = np.mean(mva_error[i,j,:])
+                mean_mva_error[i,j] = np.mean(mva_error, axis=-1)
 
                 del model
                 tf.keras.backend.clear_session()
