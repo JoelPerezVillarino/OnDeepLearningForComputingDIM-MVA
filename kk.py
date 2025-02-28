@@ -19,11 +19,25 @@ path_weights = os.path.join(cwd, "trained_models", "cir", "1Yr5YrSwap", key, mod
 x_val = np.load(os.path.join(path_data, "Xval.npy"))
 y_val = np.load(os.path.join(path_data, "DIMval.npy"))[:, :-1]
 y_train = np.load(os.path.join(path_data, "IMtrain.npy"))[:, :-1]
+mva_val = np.load(os.path.join(path_data, "MVA.npy"))
 monitoring_times = np.load(os.path.join(path_data, "monitoring_times.npy"))[:-1]
 num_outputs = monitoring_times.size
 
 params_min = np.load(os.path.join(path_data, "params_min.npy"))
 params_max = np.load(os.path.join(path_data, "params_max.npy"))
+
+
+# Load results
+path_results = os.path.join(cwd, "results", "cir", "1Yr5YrSwap")
+mae = np.loadtxt(os.path.join(path_results, "mae.txt"))
+mse = np.loadtxt(os.path.join(path_results, "mse.txt"))
+num_samples = np.loadtxt(os.path.join(path_results, "num_samples.txt"))
+mva_error = np.load(os.path.join(path_results, "mva_error.npy"))
+mean_mva_error = np.load(os.path.join(path_results, "mean_mva_error.npy"))
+
+print(mva_val.shape)
+print(mva_error.shape)
+print(mean_mva_error.shape)
 
 # preprocessing_layer = Normalization()
 # preprocessing_layer.load_bounds(params_min, params_max)
@@ -46,9 +60,8 @@ params_max = np.load(os.path.join(path_data, "params_max.npy"))
 #     plt.pause(3)
 
 
-fig = plt.figure(figsize=(12,8))
-ax = fig.add_subplot(111)
-ax.plot(monitoring_times, y_val[146], "o", label="DIM")
-ax.plot(monitoring_times, y_train[3004], "o", label="IM")
-ax.legend()
-plt.show()
+# fig = plt.figure(figsize=(12,8))
+# ax = fig.add_subplot(111)
+# ax.plot(monitoring_times, y_val[146], "o", label="DIM")
+# ax.plot(monitoring_times, y_train[3004], "o", label="IM")
+# ax.legend()

@@ -134,7 +134,7 @@ class Train:
         val_mse = np.zeros((M, self.num_trainings))
         val_mae = np.zeros((M, self.num_trainings))
         mva_error = np.zeros((M, self.num_trainings, self.num_val_samples))
-        mean_mva_error = np.zeros((M, self.num_train_samples))
+        mean_mva_error = np.zeros((M, self.num_val_samples))
         training_time = np.zeros((M, self.num_trainings))
         # Trainings
         x_train_sample = None
