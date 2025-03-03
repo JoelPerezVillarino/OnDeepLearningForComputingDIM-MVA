@@ -1,2 +1,3 @@
 *.pyc
-./data/*
+./data
+./trained_models
