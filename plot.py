@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 from src.test import convergence_num_train_samples, compute_errors_per_param
 
 
-# convergence_num_train_samples('cir', '1Yr5YrSwap', save=False)
+convergence_num_train_samples('cir', '1Yr5YrSwap', save=False)
 # compute_errors_per_param('cir', '1Yr5YrSwap', 'num_samples_4194304', save=False)
 # compute_errors_per_param('cir', '1Yr5YrSwap', 'num_samples_131072', save=False) # Works fine
 # compute_errors_per_param('cir', '1Yr5YrSwap', 'num_samples_65536', save=False) # Works fine
 
-convergence_num_train_samples('hull_white', '1Yr5YrSwap', save=False)
+# convergence_num_train_samples('hull_white', '1Yr5YrSwap', save=False)
 # compute_errors_per_param('hull_white', '1Yr5YrSwap', 'num_samples_4194304', save=False) 
 # compute_errors_per_param('hull_white', '1Yr5YrSwap', 'num_samples_2097152', save=False) # Works fine
 
