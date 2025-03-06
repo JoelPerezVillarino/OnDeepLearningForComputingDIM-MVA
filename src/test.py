@@ -86,28 +86,31 @@ def compute_errors_per_param(
         num_nn_layers=3, 
         num_nn_units=256,
         idx_time=35,
-        eps=1e-12
+        eps=1e-12,
+        save=False,
+        plot=True
     ):
     # Define paths to data and models
-    data_path = os.path.join(os.getcwd(),"data", model_label, dataset_name)
+    data_path = os.path.join(os.getcwd(),"data", model_label, 'dataset-'+dataset_name)
     weights_path = os.path.join(os.getcwd(), "trained_models", model_label, dataset_name, folder_weights)
-    folder_results = os.path.join(os.getcwd(), "results", model_label, dataset_name)
-    if not os.path.isdir(folder_results):
-        raise ValueError("Folder with the results not found.")
-    folder_results = os.path.join(folder_results, "errors_per_param") 
-    os.makedirs(folder_results, exist_ok=True)
-    folder_results = os.path.join(folder_results, folder_weights)
-    os.makedirs(folder_results)
+    if save:
+        folder_results = os.path.join(os.getcwd(), "results", model_label, dataset_name)
+        if not os.path.isdir(folder_results):
+            raise ValueError("Folder with the results not found.")
+        folder_results = os.path.join(folder_results, "errors_per_param") 
+        os.makedirs(folder_results, exist_ok=True)
+        folder_results = os.path.join(folder_results, folder_weights)
+        os.makedirs(folder_results)
 
     # Count the nbr of models trained (nbr of weight files)
     num_models = len([f for f in os.listdir(weights_path) if os.path.isfile(os.path.join(weights_path,f))])
 
     # Load dataset 
     monitoring_times = np.load(os.path.join(data_path, "monitoring_times.npy"))[:-1]
-    x_val = np.load(os.path.join(data_path, "Xtrain.npy"))
+    x_val = np.load(os.path.join(data_path, "Xval.npy"))
     DIM = np.load(os.path.join(data_path, "DIMval.npy"))[:,:-1]
     MVA = np.load(os.path.join(data_path, "MVA.npy"))
-    cumfs = np.load(os.path.join(data_path, "fundind_spread_discounts.npy"))
+    cumfs = np.load(os.path.join(data_path, "funding_spread_discounts.npy"))
     
     # Data for nn
     params_min = np.load(os.path.join(data_path,"params_min.npy"))
@@ -150,8 +153,17 @@ def compute_errors_per_param(
     epp_matrix[:, params_min.size+1] = np.mean(MVAs, axis=1)
 
     # Save results
-    np.savetxt(os.path.join(folder_results, f"epp_matrix.txt"), epp_matrix)
-    np.save(os.path.join(folder_results, f"MVA_errors_per_nn.npy"), MVAs)
-    np.save(os.path.join(folder_results, f"DIM_errors_per_nn_time_idx_{idx_time}.npy"), DIMs)
+    if save:
+        np.savetxt(os.path.join(folder_results, f"epp_matrix.txt"), epp_matrix)
+        np.save(os.path.join(folder_results, f"MVA_errors_per_nn.npy"), MVAs)
+        np.save(os.path.join(folder_results, f"DIM_errors_per_nn_time_idx_{idx_time}.npy"), DIMs)
+    
+    if plot:
+        num_params = params_min.size
+        fig, axs = plt.subplots(figsize=(16,10), nrows=num_params,ncols=1)
+        for i,ax in enumerate(axs):
+            ax.scatter(epp_matrix[:, num_params], epp_matrix[:,i])
+        plt.show()
+        
 
     return

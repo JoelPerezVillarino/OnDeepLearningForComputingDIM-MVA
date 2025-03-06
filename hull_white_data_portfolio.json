@@ -1,0 +1,85 @@
+{
+    "model_label": "hull_white",
+    "dataset_name": "portfolio_swaps",
+    "params_min": {
+        "b0": -0.005,
+        "b1": 0.0,
+        "b2": 0.0,
+        "kappa": 2.5,
+        "theta": 0.01,
+        "vol": 0.01,
+        "x0": 0.01,
+        "spread": -0.001
+    },
+    "params_max": {
+        "b0": 0.05,
+        "b1": 0.01,
+        "b2": 0.01,
+        "kappa": 7.5,
+        "theta": 0.05,
+        "vol": 0.1,
+        "x0":0.05,
+        "spread": 0.001
+    },
+    "irs_params": {
+        "1": {
+            "start_time": 0,
+            "maturity": 5,
+            "fixed_tenor": 0.5,
+            "float_tenor": 0.25,
+            "K": 0,
+            "is_payer": 0,
+            "notional": 100
+        },
+        "2": {
+            "start_time": 0,
+            "maturity": 6,
+            "fixed_tenor": 0.5,
+            "float_tenor": 0.25,
+            "K": 0,
+            "is_payer": 1,
+            "notional": 100
+        },
+        "3": {
+            "start_time": 0,
+            "maturity": 7,
+            "fixed_tenor": 0.5,
+            "float_tenor": 0.25,
+            "K": 0,
+            "is_payer": 0,
+            "notional": 100
+        },
+        "4": {
+            "start_time": 0,
+            "maturity": 8,
+            "fixed_tenor": 1,
+            "float_tenor": 0.5,
+            "K": 0,
+            "is_payer": 1,
+            "notional": 100
+        },
+        "5": {
+            "start_time": 0,
+            "maturity": 9,
+            "fixed_tenor": 1,
+            "float_tenor": 0.5,
+            "K": 0,
+            "is_payer": 0,
+            "notional": 100
+        },
+        "6": {
+            "start_time": 0,
+            "maturity": 10,
+            "fixed_tenor": 1,
+            "float_tenor": 0.5,
+            "K": 0,
+            "is_payer": 1,
+            "notional": 100
+        }
+    },
+    "time_step": 0.1,
+    "num_samples_train": 4194304,
+    "num_samples_val": 32,
+    "num_MC_paths": 1048576,
+    "num_processes": 32
+}
