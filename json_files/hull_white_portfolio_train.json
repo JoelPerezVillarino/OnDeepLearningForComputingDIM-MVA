@@ -1,6 +1,6 @@
 {
-    "model_label": "cir",
-    "dataset_name": "1Yr5YrSwap",
+    "model_label": "hull_white",
+    "dataset_name": "portfolio_swaps",
     "network_params": {
         "num_layers": 3,
         "num_units": 256,
@@ -14,13 +14,13 @@
     },
     "lr_schedule_config": {
         "monitor": "loss",
-        "initial_lr":1e-3,
+        "initial_lr": 1e-3,
         "factor": 0.5,
         "patience": 50,
         "threshold": 1,
         "min_lr": 1e-6
     },
-    "num_trainings": 20,
+    "num_trainings": 10,
     "epochs": 2000,
     "batch_size": 4096
 }

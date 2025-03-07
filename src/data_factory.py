@@ -94,7 +94,7 @@ class DataGen:
         self.data_dir = os.path.join(current_dir, "data")
         os.makedirs(self.data_dir, exist_ok=True)
         self.data_dir = os.path.join(self.data_dir, self.model_label, "dataset"+"-"+self.dataset_name)
-        os.makedirs(self.data_dir)
+        os.makedirs(self.data_dir, exist_ok=True)
 
         # Save params min and params max
         np.save(os.path.join(self.data_dir, "params_min.npy"),self.pmin)
@@ -193,6 +193,58 @@ class DataGen:
             self.check_swap_maturities(portfolio,self.monitoring_times[n])
         self.clear_swap_status(portfolio)
         return DIM
+    
+    def generate_variance_path(
+        self, 
+        x:np.ndarray, 
+        y:np.ndarray,
+        portfolio:list, 
+        rng:np.random._generator.Generator
+    ):
+        # Estimate variance of one sample (per monitoring time)
+        ones = np.ones((self.num_MC_paths,))
+        if self.model_label == "hull_white":
+            C = NelsonSiegel(b0=x[0]*ones,b1=x[1]*ones,b2=x[2]*ones,lamb=self.LAMB*ones)
+            ir_model = HullWhite(a=x[3]*ones, vol=x[4]*ones, Y=C)
+        elif self.model_label == "cir":
+            C = NelsonSiegel(b0=x[0]*ones,b1=x[1]*ones,b2=x[2]*ones,lamb=self.LAMB*ones)
+            ir_model = CIR(kappa=x[3]*ones,theta=x[4]*ones,vol=x[5]*ones,x0=x[6]*ones,Y=C)
+        # Initialize vars
+        r = np.zeros((self.num_MC_paths,)) 
+        V = np.zeros((self.num_MC_paths,))
+        discount = np.ones((self.num_MC_paths,))
+        S = np.zeros((self.num_MC_paths,self.tenors.size-1))
+        VAR = np.zeros((self.num_monitoring_times,))
+
+        # Time t0
+        ys = ir_model.computeYieldPoints(self.monitoring_times[0],ir_model.x0,self.tenors)
+        P = self.build_discount_curve(ys)
+        if self.num_swaps == 1: # One swap case, we work with no ATM swap
+            portfolio[0].setRateATM(P,x[-1]*ones)
+        else: # ATM swap
+            for swap in portfolio: swap.setRateATM(P)
+
+        V = self.eval_portfolio(portfolio,P,self.monitoring_times[0])
+        self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[0],ys,V,S)
+        IM = self.im_engine.compute_initial_margin(S)
+        VAR[0] = np.sum(np.square(IM - y[0])) / (self.num_MC_paths-1)
+        # Forward times
+        r = ir_model.x0
+        for n in range(1,self.num_monitoring_times-1):
+            r = ir_model.shortRateSimulStep(self.monitoring_times[n-1],self.monitoring_times[n],r,rng)
+            discount *= np.exp(-ir_model.fromXtoR(self.monitoring_times[n],r)\
+                            *(self.monitoring_times[n]-self.monitoring_times[n-1]))
+            ys = ir_model.computeYieldPoints(self.monitoring_times[n],r,self.tenors)
+            P = self.build_discount_curve(ys)
+            for swap in portfolio: swap.checkStatus(P, self.monitoring_times[n])
+            V = self.eval_portfolio(portfolio,P,self.monitoring_times[n])
+            self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[n],ys,V,S)
+            IM = self.im_engine.compute_initial_margin(S)*discount
+            VAR[n] = np.sum(np.square(IM - y[n])) / (self.num_MC_paths-1)
+            self.check_swap_maturities(portfolio,self.monitoring_times[n])
+        self.clear_swap_status(portfolio)
+
+        return VAR
 
     @timer
     def gen_train_set(self):
@@ -206,6 +258,8 @@ class DataGen:
             C = NelsonSiegel(b0=X[:,0], b1=X[:,1], b2=X[:,2], lamb=self.LAMB*np.ones((self.num_samples_train,)))
             ir_model = CIR(kappa=X[:,3],theta=X[:,4],vol=X[:,5],x0=X[:,6],Y=C)
 
+        # Do a deepcopy of the portfolio to avoid problems (work with copy of portfolio)
+        portfolio = deepcopy(self.portfolio)
         # Initialize vars
         r = np.zeros((self.num_samples_train,)) # Array short rate
         V = np.zeros((self.num_samples_train,)) # Array portfolio price
@@ -219,12 +273,16 @@ class DataGen:
         ys = ir_model.computeYieldPoints(self.monitoring_times[0], ir_model.x0, self.tenors)
         P = self.build_discount_curve(ys)
         if self.num_swaps==1: # One swap case: we work with different fixed rates (based on fair swap rate)
-            self.portfolio[0].setRateATM(P,X[:,-1]) 
+            # self.portfolio[0].setRateATM(P,X[:,-1]) 
+            portfolio[0].setRateATM(P,X[:,-1]) 
         else: # Portfolio swap ATM
-            for swap in self.portfolio: swap.setRateATM(P)
+            # for swap in self.portfolio: swap.setRateATM(P)
+            for swap in portfolio: swap.setRateATM(P)
 
-        V = self.eval_portfolio(self.portfolio,P, self.monitoring_times[0])
-        self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[0],ys,V,S)
+        # V = self.eval_portfolio(self.portfolio,P, self.monitoring_times[0])
+        V = self.eval_portfolio(portfolio,P,self.monitoring_times[0])
+        # self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[0],ys,V,S)
+        self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[0],ys,V,S)
         IM[:,0] = self.im_engine.compute_initial_margin(S)
         # Forward times
         r = ir_model.x0
@@ -239,24 +297,25 @@ class DataGen:
                             (self.monitoring_times[n]-self.monitoring_times[n-1]))
             ys = ir_model.computeYieldPoints(self.monitoring_times[n],r,self.tenors)
             P = self.build_discount_curve(ys)
-            for swap in self.portfolio: swap.checkStatus(P,self.monitoring_times[n]) # Manage last coupon if needed
-            V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[n])
-            self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[n],ys,V,S)
+            # for swap in self.portfolio: swap.checkStatus(P,self.monitoring_times[n]) # Manage last coupon if needed
+            for swap in portfolio: swap.checkStatus(P,self.monitoring_times[n]) # Manage last coupon if needed
+            # V = self.eval_portfolio(self.portfolio,P,self.monitoring_times[n])
+            V = self.eval_portfolio(portfolio,P,self.monitoring_times[n])
+            # self.compute_portfolio_sensitivities(self.portfolio,self.monitoring_times[n],ys,V,S)
+            self.compute_portfolio_sensitivities(portfolio,self.monitoring_times[n],ys,V,S)
             IM[:,n] = self.im_engine.compute_initial_margin(S)*discount
             # Check if some swap matures and delete if it is the case
-            self.check_swap_maturities(self.portfolio,self.monitoring_times[n])
+            # self.check_swap_maturities(self.portfolio,self.monitoring_times[n])
+            self.check_swap_maturities(portfolio,self.monitoring_times[n])
         
         # Save generated data
         np.save(os.path.join(self.data_dir, "Xtrain.npy"), X)
         np.save(os.path.join(self.data_dir, "IMtrain.npy"), IM)
-        self.clear_swap_status(self.portfolio)
+        # self.clear_swap_status(self.portfolio)
+        self.clear_swap_status(self.portfolio) # Is not needed since i did a copy of portfolio
         print(f"Done!")
         return
     
-    # @staticmethod
-    # def worker_function(instance, X, portfolio, rng):
-    #     return instance.generate_DIM_path(X, portfolio, rng)
-
     @timer
     def gen_val_set(self):
         print(f"Starting generation of validation set...")
@@ -281,6 +340,32 @@ class DataGen:
         np.save(os.path.join(self.data_dir, "DIMval.npy"),DIM)
         np.save(os.path.join(self.data_dir, "MVA.npy"),MVA)
         self.clear_swap_status(self.portfolio)
+        print(f"Done!")
+        return
+    
+    @timer
+    def val_set_variance(self):
+        # Estimate variance of the dataset taking as a reference the val-set values 
+        print(f"Computing estimated variance....")
+        path_xval = os.path.join(self.data_dir,"Xval.npy")
+        path_yval = os.path.join(self.data_dir,"DIMval.npy")
+        if not os.path.isfile(path_xval) or not os.path.isfile(path_yval):
+            print("xVal and DIMval data not found")
+            return
+        # Load data
+        X = np.load(path_xval)
+        Y = np.load(path_yval)
+        rng = np.random.default_rng()
+        child_rngs = rng.spawn(self.num_samples_val) # Create child rng for parallel computation
+        duplicated_portfolios = [deepcopy(self.portfolio) for _ in range(self.num_samples_val)]
+        # Multiprocessing for variance computation
+        with Pool(processes=self.num_processes) as p:
+            VAR = p.starmap(
+                self.generate_variance_path,
+                zip(X, Y, duplicated_portfolios, child_rngs)
+            )
+        VAR = np.array(VAR)
+        np.save(os.path.join(self.data_dir, "estimated_variance.npy"),VAR)
         print(f"Done!")
         return
 
