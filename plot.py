@@ -16,17 +16,18 @@ from src.test import convergence_num_train_samples, compute_errors_per_param
 
 
 
+folder = os.path.join(os.getcwd(),"data","cir", "dataset-1Yr5YrSwap_2")
 # folder = os.path.join(os.getcwd(),"data","hull_white", "dataset-1Yr5YrSwap")
 # folder = os.path.join(os.getcwd(),"data","hull_white", "dataset-portfolio_swaps")
-# ts = np.load(os.path.join(folder,"monitoring_times.npy"))
-# xtrain = np.load(os.path.join(folder,"Xtrain.npy"))
-# ytrain = np.load(os.path.join(folder,"IMtrain.npy"))
-# xval = np.load(os.path.join(folder,"Xval.npy"))
-# yval = np.load(os.path.join(folder,"DIMval.npy"))
+ts = np.load(os.path.join(folder,"monitoring_times.npy"))
+xtrain = np.load(os.path.join(folder,"Xtrain.npy"))
+ytrain = np.load(os.path.join(folder,"IMtrain.npy"))
+xval = np.load(os.path.join(folder,"Xval.npy"))
+yval = np.load(os.path.join(folder,"DIMval.npy"))
 
 
-# plt.figure(figsize=(12,8))
-# plt.plot(ts,ytrain[5000:7000].T)
-# plt.plot(ts,yval.T)
+plt.figure(figsize=(12,8))
+# plt.plot(ts,ytrain[501:2000].T)
+plt.plot(ts,yval.T)
 # plt.plot(ts,DIM_val[:,:].T)
-# plt.show()
+plt.show()
