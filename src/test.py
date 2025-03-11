@@ -47,8 +47,18 @@ def convergence_num_train_samples(model_label, dataset_name, alpha=0.05, save=Tr
         data_mva = np.concatenate(
             (num_samples[:,None],mean_mva[:,None],bound_mva[:,None],oNm1_mva[:,None]),axis=1
         )     
-        np.savetxt(os.path.join(folder_results, "rmse.dat"),data_rmse,header="num_samples\tmean\tbound\tonm1")
-        np.savetxt(os.path.join(folder_results, "mva.dat"),data_mva,header="num_samples\tmean\tbound\tonm1")
+        np.savetxt(os.path.join(folder_results, "rmse.dat"),data_rmse)
+        np.savetxt(os.path.join(folder_results, "mva.dat"),data_mva)
+
+        # ts_gen_trainset = np.array(
+        #     [1.277965,1.959296,3.366325,6.071783,11.38792,22.313036,46.345505,91.894902,184.558059,
+        #     446.336076,918.214170,1847.445999,3808.832578]
+        # )
+        # training_time += ts_gen_trainset
+        # data_time = np.concatenate(
+        #     [num_samples[:,None], training_time[:,None]], axis=1
+        # )
+        # np.savetxt(os.path.join(folder_results, "train_time.dat"), data_time, header="num_samples\ttime")
     
     if plot:
         fig = plt.figure(figsize=(12,8))
@@ -85,7 +95,7 @@ def compute_errors_per_param(
         folder_weights,
         num_nn_layers=3, 
         num_nn_units=256,
-        idx_time=35,
+        idx_time=21,
         eps=1e-12,
         save=False,
         plot=True
@@ -154,9 +164,9 @@ def compute_errors_per_param(
 
     # Save results
     if save:
-        np.savetxt(os.path.join(folder_results, f"epp_matrix.txt"), epp_matrix)
-        np.save(os.path.join(folder_results, f"MVA_errors_per_nn.npy"), MVAs)
-        np.save(os.path.join(folder_results, f"DIM_errors_per_nn_time_idx_{idx_time}.npy"), DIMs)
+        np.savetxt(os.path.join(folder_results, f"epp_matrix_time_idx_{idx_time}.txt"), epp_matrix)
+        np.save(os.path.join(folder_results, f"MVA_errors_per_nn_time_idx_{idx_time}.npy"), MVAs)
+        np.save(os.path.join(folder_results, f"DIM_errors_per_nn.npy"), DIMs)
     
     if plot:
         num_params = params_min.size
@@ -165,5 +175,90 @@ def compute_errors_per_param(
             ax.scatter(epp_matrix[:, num_params], epp_matrix[:,i])
         plt.show()
         
+
+    return
+
+def compute_errors_per_time(
+    model_label, 
+    dataset_name, 
+    folder_weights,
+    num_nn_layers=3, 
+    num_nn_units=256,
+    alpha=0.05,
+    eps=1e-12,
+    save=False,
+    plot=True
+):
+    # Compute mean errors per monitoring time
+    data_path = os.path.join(os.getcwd(),"data", model_label, 'dataset-'+dataset_name)
+    weights_path = os.path.join(os.getcwd(), "trained_models", model_label, dataset_name, folder_weights)
+    if save:
+        folder_results = os.path.join(os.getcwd(), "results", model_label, dataset_name)
+        if not os.path.isdir(folder_results):
+            raise ValueError("Folder with the results not found.")
+        folder_results = os.path.join(folder_results, "errors_per_time") 
+        os.makedirs(folder_results, exist_ok=True)
+        folder_results = os.path.join(folder_results, folder_weights)
+        os.makedirs(folder_results)
+
+    # Count the nbr of models trained (nbr of weight files)
+    num_models = len([f for f in os.listdir(weights_path) if os.path.isfile(os.path.join(weights_path,f))])
+
+    # Load dataset 
+    monitoring_times = np.load(os.path.join(data_path, "monitoring_times.npy"))[:-1]
+    x_val = np.load(os.path.join(data_path, "Xval.npy"))
+    DIM = np.load(os.path.join(data_path, "DIMval.npy"))[:,:-1]
+    
+    # Data for nn
+    params_min = np.load(os.path.join(data_path,"params_min.npy"))
+    params_max = np.load(os.path.join(data_path,"params_max.npy"))
+    num_outputs = monitoring_times.size
+
+    preprocessing_layer = Normalization()
+    preprocessing_layer.load_bounds(params_min, params_max)
+
+    # Load nn architecture
+    model = loadSequentialModel(num_nn_units,num_nn_layers,num_outputs,preprocessing_layer=preprocessing_layer)
+    model(params_min[:,None]) # Needed for initialize the network (before load the saved weights)
+
+    # Allocate arrays
+    mean_difs = np.zeros((num_models, num_outputs,))
+    std_difs = np.zeros((num_models, num_outputs,))
+
+    # Evaluate models
+    for j in range(num_models):
+        path_nn_weights = os.path.join(weights_path, f"model_{j}.h5")
+        if os.path.exists(path_nn_weights):
+            model.load_weights(path_nn_weights)
+        else:
+            raise FileNotFoundError(f"File not found: {path_nn_weights}")
+
+        y_pred = model(x_val).numpy()
+        # temp = np.abs(DIM - y_pred) / (DIM+eps)
+        temp = np.abs((DIM - y_pred))
+        mean_difs[j] = np.mean(temp, axis=0)
+        std_difs[j] = np.std(temp, axis=0)
+
+
+    t_factor = stats.t(df=num_models).ppf((alpha,1-alpha))
+    means = np.mean(mean_difs, axis=0)
+    stds = np.std(std_difs, axis=0, ddof=1)
+    bounds = t_factor[-1]*stds/np.sqrt(num_models)
+
+    if save:
+        np.save(os.path.join(folder_results, "mean_erros.npy"), means)
+        np.save(os.path.join(folder_results, "t_bounds.npy"), bounds)
+        table = np.concatenate([monitoring_times[:,None], means[:,None], bounds[:,None]], axis=1)
+        np.savetxt(os.path.join(folder_results, "plot_table.txt"), table)
+    
+    if plot:
+        fig = plt.figure(figsize=(12,8))
+        ax = fig.add_subplot(111)
+        ax.set_title("Error per monitoring time")
+        ax.errorbar(monitoring_times, means, yerr=bounds, fmt='o', capsize=5)
+        # ax.set_yscale("log")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Absolute error")
+        plt.show()
 
     return

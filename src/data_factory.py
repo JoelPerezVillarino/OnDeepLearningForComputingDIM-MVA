@@ -343,6 +343,41 @@ class DataGen:
         print(f"Done!")
         return
     
+    def gen_val_set_adhoc(self, a:list=[0.01,0.025,0.05], sigma:list=[0.005,0.0075,0.015]):
+        a = np.array(a)
+        sigma = np.array(sigma)
+        self.num_samples_val = a.size*sigma.size
+        X = self.generate_lhs_samples(self.num_samples_val)
+        # Change the values of a sigma for our a sigma combinations!
+        A, S = np.meshgrid(a, sigma, indexing="ij")
+        temp = np.concatenate([np.ravel(A)[:,None], np.ravel(S)[:,None]], axis=1)
+        if self.model_label == "hull_white":
+            X[:,3:5] = temp
+        else:
+            X[:,4:6] = temp
+
+        rng = np.random.default_rng()
+        if self.num_samples_val<self.num_processes:
+            child_rngs = rng.spawn(self.num_samples_val) 
+        else:
+            child_rngs = rng.spawn(self.num_processes) 
+
+        duplicated_portfolios = [deepcopy(self.portfolio) for _ in range(self.num_samples_val)]
+        with Pool(processes=self.num_processes) as p: # Multiprocessing DIM computation
+            DIM = p.starmap(
+                self.generate_DIM_path,
+                zip(X, duplicated_portfolios, child_rngs)
+            )
+        DIM = np.array(DIM)
+        fdDIM = DIM[:,1:] * self.cumfs 
+        MVA = np.sum(fdDIM,axis=1)*self.time_step
+        np.save(os.path.join(self.data_dir, "Xval.npy"),X)
+        np.save(os.path.join(self.data_dir, "DIMval.npy"),DIM)
+        np.save(os.path.join(self.data_dir, "MVA.npy"),MVA)
+        self.clear_swap_status(self.portfolio)
+        print(f"Done!")
+        return
+    
     @timer
     def val_set_variance(self):
         # Estimate variance of the dataset taking as a reference the val-set values 

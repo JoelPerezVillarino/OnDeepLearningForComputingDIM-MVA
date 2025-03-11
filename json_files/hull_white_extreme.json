@@ -1,0 +1,35 @@
+{
+    "model_label": "hull_white",
+    "dataset_name": "1Yr5YrSwap_ExtremeValues",
+    "params_min": {
+        "b0": -0.005,
+        "b1": 0.0,
+        "b2": 0.0,
+        "a": 0.01,
+        "vol": 0.0005,
+        "spread": -0.001
+    },
+    "params_max": {
+        "b0": 0.05,
+        "b1": 0.01,
+        "b2": 0.01,
+        "a": 0.05,
+        "vol": 0.015,
+        "spread": 0.001
+    },
+    "irs_params": {
+        "start_time": 1,
+        "maturity": 6,
+        "fixed_tenor":0.5,
+        "float_tenor":0.25,
+        "K": 0,
+        "is_payer": 1,
+        "notional": 100
+    },
+    "time_step": 0.05,
+    "num_samples_train": 4194304,
+    "num_samples_val": 9,
+    "num_MC_paths": 2097152,
+    "num_processes": 32
+
+}
