@@ -2,7 +2,7 @@ import os
 from src import DataGen
 
 
-json_path = os.path.join(os.getcwd(), "cir_data.json")
+json_path = os.path.join(os.getcwd(), "json_files", "cir_data.json")
 # json_path = os.path.join(os.getcwd(), "cir_data_2.json")
 # json_path = os.path.join(os.getcwd(), "hull_white_data.json")
 # json_path = os.path.join(os.getcwd(), "json_files", "hull_white_data_portfolio.json")
