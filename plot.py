@@ -15,8 +15,8 @@ from src.test import convergence_num_train_samples, compute_errors_per_param,\
 # compute_errors_per_param('hull_white', '1Yr5YrSwap', 'num_samples_4194304', save=True) 
 # compute_errors_per_param('hull_white', '1Yr5YrSwap', 'num_samples_2097152', save=False) # Works fine
 
-compute_table_errors("hull_white", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_4194304"])
-compute_table_errors("cir", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_4194304"])
+# compute_table_errors("hull_white", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_4194304"])
+# compute_table_errors("cir", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_4194304"])
 
 
 
@@ -34,18 +34,18 @@ compute_table_errors("cir", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_41
 # folder = os.path.join(os.getcwd(),"data","cir", "dataset-1Yr5YrSwap_2")
 # folder = os.path.join(os.getcwd(),"data","hull_white", "dataset-1Yr5YrSwap")
 # folder = os.path.join(os.getcwd(),"data","hull_white", "dataset-portfolio_swaps")
-# ts = np.load(os.path.join(folder,"monitoring_times.npy"))
+folder = os.path.join(os.getcwd(),"data","cir", "dataset-portfolio_swaps")
+ts = np.load(os.path.join(folder,"monitoring_times.npy"))
 # xtrain = np.load(os.path.join(folder,"Xtrain.npy"))
-# ytrain = np.load(os.path.join(folder,"IMtrain.npy"))
+ytrain = np.load(os.path.join(folder,"IMtrain.npy"))
 # xval = np.load(os.path.join(folder,"Xval.npy"))
-# yval = np.load(os.path.join(folder,"DIMval.npy"))
-# print(ts)
+yval = np.load(os.path.join(folder,"DIMval.npy"))
 # print(np.where(np.isclose(ts, 1)))
 
 # print(ts.shape)
 
-# plt.figure(figsize=(12,8))
+plt.figure(figsize=(12,8))
 # plt.plot(ts,ytrain[501:2000].T)
 # plt.plot(ts,yval.T)
-# plt.plot(ts,DIM_val[:,:].T)
-# plt.show()
+plt.plot(ts,yval[:,:].T)
+plt.show()
