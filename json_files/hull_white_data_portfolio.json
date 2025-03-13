@@ -80,6 +80,6 @@
     "time_step": 0.1,
     "num_samples_train": 4194304,
     "num_samples_val": 32,
-    "num_MC_paths": 1048576,
+    "num_MC_paths": 2097152,
     "num_processes": 32
 }

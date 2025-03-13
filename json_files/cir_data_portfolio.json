@@ -5,7 +5,7 @@
         "b0": -0.005,
         "b1": 0.0,
         "b2": 0.0,
-        "kappa": 2.5,
+        "kappa": 0.5,
         "theta": 0.01,
         "vol": 0.01,
         "x0": 0.01,
@@ -80,6 +80,6 @@
     "time_step": 0.1,
     "num_samples_train": 4194304,
     "num_samples_val": 32,
-    "num_MC_paths": 1048576,
+    "num_MC_paths": 2097152,
     "num_processes": 32
 }

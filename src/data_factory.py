@@ -344,6 +344,7 @@ class DataGen:
         return
     
     def gen_val_set_adhoc(self, a:list=[0.01,0.025,0.05], sigma:list=[0.005,0.0075,0.015]):
+        print("Generating adhoc DIM paths...")
         a = np.array(a)
         sigma = np.array(sigma)
         self.num_samples_val = a.size*sigma.size
@@ -368,6 +369,9 @@ class DataGen:
                 self.generate_DIM_path,
                 zip(X, duplicated_portfolios, child_rngs)
             )
+        # DIM = list()
+        # for j in range(self.num_samples_val):
+        #     DIM.append(self.generate_DIM_path(X[j], duplicated_portfolios[j], rng))
         DIM = np.array(DIM)
         fdDIM = DIM[:,1:] * self.cumfs 
         MVA = np.sum(fdDIM,axis=1)*self.time_step
