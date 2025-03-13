@@ -355,7 +355,8 @@ class DataGen:
         if self.model_label == "hull_white":
             X[:,3:5] = temp
         else:
-            X[:,4:6] = temp
+            X[:,3] = temp[:,0]
+            X[:,5] = temp[:,1]
 
         rng = np.random.default_rng()
         if self.num_samples_val<self.num_processes:

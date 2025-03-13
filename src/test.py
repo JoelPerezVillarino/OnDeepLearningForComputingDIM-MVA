@@ -262,3 +262,85 @@ def compute_errors_per_time(
         plt.show()
 
     return
+
+
+def compute_table_errors(
+    model_label, 
+    dataset_name, 
+    folder_weights,
+    num_nn_layers=3, 
+    num_nn_units=256,
+    idx1=21,
+    idx2=42,
+    eps=1e-12,
+):
+    data_path = os.path.join(os.getcwd(),"data", model_label, 'dataset-'+dataset_name)
+    data_path_2 = os.path.join(os.getcwd(), "data", model_label, "dataset-1Yr5YrSwap")
+    weights_path = os.path.join(os.getcwd(), "trained_models", model_label, folder_weights[0], folder_weights[1])
+    folder_results = os.path.join(os.getcwd(), "results", model_label, folder_weights[0])
+    if not os.path.isdir(folder_results):
+        raise ValueError("Folder with the results not found.")
+    folder_results = os.path.join(folder_results, "table_errors_extreme") 
+    os.makedirs(folder_results, exist_ok=True)
+
+    # Count the nbr of models trained (nbr of weight files)
+    num_models = len([f for f in os.listdir(weights_path) if os.path.isfile(os.path.join(weights_path,f))])
+    
+    # Load dataset 
+    monitoring_times = np.load(os.path.join(data_path, "monitoring_times.npy"))[:-1]
+    x_val = np.load(os.path.join(data_path, "Xval.npy"))
+    DIM = np.load(os.path.join(data_path, "DIMval.npy"))[:,:-1]
+    MVA = np.load(os.path.join(data_path, "MVA.npy"))
+    cumfs = np.load(os.path.join(data_path, "funding_spread_discounts.npy"))
+    dt = monitoring_times[1] - monitoring_times[0]
+
+    # Data for nn
+    params_min = np.load(os.path.join(data_path_2,"params_min.npy"))
+    params_max = np.load(os.path.join(data_path_2,"params_max.npy"))
+    num_outputs = monitoring_times.size
+
+    preprocessing_layer = Normalization()
+    preprocessing_layer.load_bounds(params_min, params_max)
+
+    # Load nn architecture
+    model = loadSequentialModel(num_nn_units,num_nn_layers,num_outputs,preprocessing_layer=preprocessing_layer)
+    model(params_min[:,None]) # Needed for initialize the network (before load the saved weights)
+
+    # Allocate data
+    table = np.zeros((DIM.shape[0], 5))
+    if model_label == "hull_white":
+        table[:,0] = x_val[:,3]
+        table[:,1] = x_val[:,4]
+    else:
+        table[:,0] = x_val[:,3]
+        table[:,1] = x_val[:,5]
+    
+    eDIM1 = np.zeros((DIM.shape[0], num_models))
+    eDIM2 = np.zeros((DIM.shape[0], num_models))
+    eMVAs = np.zeros((DIM.shape[0], num_models))
+
+    # Evaluate models
+    for j in range(num_models):
+        path_nn_weights = os.path.join(weights_path, f"model_{j}.h5")
+        if os.path.exists(path_nn_weights):
+            model.load_weights(path_nn_weights)
+        else:
+            raise FileNotFoundError(f"File not found: {path_nn_weights}")
+
+        print(x_val)
+        y_pred = model(x_val).numpy()
+        # print(y_pred)
+        eDIM1[:, j] = np.abs(DIM[:,idx1] - y_pred[:,idx1]) / (DIM[:,idx1]+eps)
+        eDIM2[:, j] = np.abs(DIM[:,idx2] - y_pred[:,idx2]) / (DIM[:,idx2]+eps)
+
+        # MVA
+        y_pred*=cumfs
+        mva_pred = np.sum(y_pred[:,1:],axis=1)*dt
+        eMVAs[:,j] = (MVA - mva_pred) / (MVA+eps)
+    
+    table[:, 2] = np.mean(eDIM1,axis=1)
+    table[:, 3] = np.mean(eDIM2,axis=1)
+    table[:, 4] = np.mean(eMVAs, axis=1)
+
+    np.savetxt(os.path.join(folder_results, "error_table.txt"), table)
+    return
