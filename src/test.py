@@ -98,7 +98,8 @@ def compute_errors_per_param(
         idx_time=21,
         eps=1e-12,
         save=False,
-        plot=True
+        plot=True,
+        num_models=None
     ):
     # Define paths to data and models
     data_path = os.path.join(os.getcwd(),"data", model_label, 'dataset-'+dataset_name)
@@ -110,10 +111,13 @@ def compute_errors_per_param(
         folder_results = os.path.join(folder_results, "errors_per_param") 
         os.makedirs(folder_results, exist_ok=True)
         folder_results = os.path.join(folder_results, folder_weights)
-        os.makedirs(folder_results)
+        os.makedirs(folder_results, exist_ok=True)
 
     # Count the nbr of models trained (nbr of weight files)
-    num_models = len([f for f in os.listdir(weights_path) if os.path.isfile(os.path.join(weights_path,f))])
+    if num_models is None:
+        num_models = len([f for f in os.listdir(weights_path) if os.path.isfile(os.path.join(weights_path,f))])
+    else:
+        num_models = num_models
 
     # Load dataset 
     monitoring_times = np.load(os.path.join(data_path, "monitoring_times.npy"))[:-1]
@@ -135,13 +139,15 @@ def compute_errors_per_param(
     model(params_min[:,None]) # Needed for initialize the network (before load the saved weights)
 
     # Allocate vars
-    epp_matrix = np.zeros((DIM.shape[0], params_min.size+2)) # Matrix errors per param (last entries DIM and MVA)
+    # epp_matrix = np.zeros((DIM.shape[0], params_min.size+2)) # Matrix errors per param (last entries DIM and MVA)
+    epp_matrix = np.zeros((DIM.shape[0]*num_models, params_min.size+2)) # Matrix errors per param (last entries DIM and MVA)
     DIMs = np.zeros((DIM.shape[0], num_models))
     MVAs = np.zeros((DIM.shape[0], num_models))
     dt = monitoring_times[1] - monitoring_times[0] # Equispaced time grid
 
     # Allocate x_val values in the matrix
-    epp_matrix[:,:params_min.size] = x_val
+    epp_matrix[:,:params_min.size] = np.repeat(x_val, num_models, axis=0)
+    # epp_matrix[:,:params_min.size] = x_val
 
     # Evaluate models and compute relative differences
     for j in range(num_models):
@@ -159,8 +165,13 @@ def compute_errors_per_param(
         mva_pred = np.sum(y_pred[:,1:],axis=1)*dt
         MVAs[:,j] = (MVA - mva_pred) / (MVA+eps)
     
-    epp_matrix[:, params_min.size] = np.mean(DIMs, axis=1)
-    epp_matrix[:, params_min.size+1] = np.mean(MVAs, axis=1)
+    # epp_matrix[:, params_min.size] = DIMs[:,5]
+    # epp_matrix[:, params_min.size] = MVAs[:,5]
+    # epp_matrix[:, params_min.size] = np.mean(DIMs, axis=1)
+    # epp_matrix[:, params_min.size+1] = np.mean(MVAs, axis=1)
+    epp_matrix[:, params_min.size] = DIMs.flatten()
+    epp_matrix[:, params_min.size+1] = MVAs.flatten()
+
 
     # Save results
     if save:

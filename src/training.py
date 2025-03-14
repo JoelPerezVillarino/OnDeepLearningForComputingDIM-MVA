@@ -123,15 +123,17 @@ class Train:
 
         return config
     
-    def run(self, mode="all"):
+    def run(self, mode="all",data_size=None):
         self.load_dataset()
         nn_config = self.load_model_config()
         # Defining the number of training samples employed
         m0 = 10 # Min dataset size: 2**10
         if mode == "all":
             size_set = [2**i for i in range(m0,int(np.log2(self.num_train_samples))+1)]
-        elif mode == "single":
+        elif mode == "single" and data_size is None:
             size_set = [self.x_train.shape[0]]
+        elif mode == "single" and data_size is not None:
+            size_set = [data_size]
         M = len(size_set) # Number of datasets
         # Allocate values
         val_mse = np.zeros((M, self.num_trainings))
