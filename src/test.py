@@ -355,3 +355,96 @@ def compute_table_errors(
 
     np.savetxt(os.path.join(folder_results, "error_table.txt"), table)
     return
+
+def portfolio_test(
+    model_label, 
+    dataset_name, 
+    folder_weights,
+    num_nn_layers=3, 
+    num_nn_units=256,
+    idx_scenario=13,
+    eps=1e-12,
+    alpha=0.05
+):
+    data_path = os.path.join(os.getcwd(),"data", model_label, 'dataset-'+dataset_name)
+    weights_path = os.path.join(os.getcwd(), "trained_models", model_label, folder_weights[0], folder_weights[1])
+
+    folder_results = os.path.join(os.getcwd(), "results", model_label, folder_weights[0])
+    if not os.path.isdir(folder_results):
+        raise ValueError("Folder with the results not found.")
+
+    # Count the nbr of models trained (nbr of weight files)
+    num_models = len([f for f in os.listdir(weights_path) if os.path.isfile(os.path.join(weights_path,f))])
+
+    # Load dataset 
+    monitoring_times = np.load(os.path.join(data_path, "monitoring_times.npy"))[:-1]
+    x_val = np.load(os.path.join(data_path, "Xval.npy"))
+    DIM = np.load(os.path.join(data_path, "DIMval.npy"))[:,:-1]
+    MVA = np.load(os.path.join(data_path, "MVA.npy"))
+    cumfs = np.load(os.path.join(data_path, "funding_spread_discounts.npy"))
+    dt = monitoring_times[1] - monitoring_times[0]
+
+    # Load training info
+    mse = np.loadtxt(os.path.join(folder_results,"mse.txt"))
+    mva = np.load(os.path.join(folder_results,"mean_mva_error.npy"))
+    rmse = np.sqrt(mse)
+
+    mean_rmse = np.mean(rmse)
+    mean_mva = np.mean(mva)
+    t_factor = stats.t(df=rmse.shape[0]).ppf((alpha,1-alpha))
+    std_rmse = np.std(rmse,ddof=1)
+    std_mva = np.std(mva,ddof=1)
+    bound_rmse = t_factor[-1]*std_rmse/np.sqrt(rmse.shape[0])
+    bound_mva = t_factor[-1]*std_mva/np.sqrt(mva.shape[0])
+
+    print("Metrics obtained for  the training of portfolio setting, "+model_label)
+    print(f"RMSE:  mean: {mean_rmse:.3e}; bound: {bound_rmse:.3e}")
+    print(f"MVA:  mean: {mean_mva:.3e}; bound: {bound_mva:.3e}")
+
+    # Data for nn
+    params_min = np.load(os.path.join(data_path,"params_min.npy"))
+    params_max = np.load(os.path.join(data_path,"params_max.npy"))
+    num_outputs = monitoring_times.size
+    print(f"Num monitoring times: {num_outputs}")
+
+    preprocessing_layer = Normalization()
+    preprocessing_layer.load_bounds(params_min, params_max)
+
+    # Load nn architecture
+    model = loadSequentialModel(num_nn_units,num_nn_layers,num_outputs,preprocessing_layer=preprocessing_layer)
+    model(params_min[:,None]) # Needed for initialize the network (before load the saved weights)
+    DIMpred = np.zeros((num_outputs, num_models))
+    eMVA = np.zeros((DIM.shape[0],num_models))
+    
+    # Evaluate models
+    for j in range(num_models):
+        path_nn_weights = os.path.join(weights_path, f"model_{j}.h5")
+        if os.path.exists(path_nn_weights):
+            model.load_weights(path_nn_weights)
+        else:
+            raise FileNotFoundError(f"File not found: {path_nn_weights}")
+
+        y_pred = model(x_val).numpy()
+        # print(y_pred)
+        DIMpred[:, j] = y_pred[idx_scenario]
+        # MVA
+        y_pred*=cumfs
+        mva_pred = np.sum(y_pred[:,1:],axis=1)*dt
+        eMVA[:,j] = (MVA - mva_pred) / (MVA+eps)
+    
+    mean_eMVA = np.mean(eMVA,axis=1)
+    t_factor = stats.t(df=eMVA.shape[1]).ppf((alpha,1-alpha))
+    std_eMVA = np.std(eMVA,axis=1,ddof=1)
+    bound_eMVA = t_factor[-1]*std_eMVA/np.sqrt(eMVA.shape[1])
+    print(f"MVA Relative errors scenario {idx_scenario}")
+    print(f"mean: {mean_eMVA[idx_scenario]:.3e}, bound: {bound_eMVA[idx_scenario]:.3e}")
+    print(f"MVA maximum relative error:")
+    max_eMVA = np.max(mean_eMVA)
+    idx_max = np.where(np.isclose(max_eMVA, mean_eMVA))
+    print(f"mean: {max_eMVA:.3e}, bound: {bound_eMVA[idx_max[0][0]]:.3e}")
+
+
+    table = np.concatenate([monitoring_times[:,None], DIM[idx_scenario].reshape(-1,1), DIMpred], axis=1)
+    np.savetxt(os.path.join(folder_results, "data_plot_DIM.txt"),table)
+
+    return

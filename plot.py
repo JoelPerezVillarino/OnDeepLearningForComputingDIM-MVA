@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.test import convergence_num_train_samples, compute_errors_per_param,\
-    compute_errors_per_time, compute_table_errors
+    compute_errors_per_time, compute_table_errors, portfolio_test
 
 
 # convergence_num_train_samples('cir', '1Yr5YrSwap', save=True)
@@ -17,9 +17,19 @@ from src.test import convergence_num_train_samples, compute_errors_per_param,\
 # compute_errors_per_param('hull_white', '1Yr5YrSwap', 'num_samples_1048576', save=False) # Works fine
 
 # compute_table_errors("hull_white", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_4194304"])
-compute_table_errors("cir", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_1048576"])
+# compute_table_errors("cir", "1Yr5YrSwap_Extreme", ["1Yr5YrSwap", "num_samples_1048576"])
+
+portfolio_test("hull_white", "portfolio_swaps",["portfolio_swaps","num_samples_4194304"], idx_scenario=23)
+portfolio_test("cir", "portfolio_swaps",["portfolio_swaps","num_samples_1048576"], idx_scenario=13)
 
 
+folder = os.path.join(os.getcwd(),"data","hull_white", "dataset-portfolio_swaps")
+xHW = np.load(os.path.join(folder, "Xval.npy"))
+print(xHW[23])
+print()
+folder = os.path.join(os.getcwd(),"data","cir", "dataset-portfolio_swaps")
+xCIR = np.load(os.path.join(folder, "Xval.npy"))
+print(xCIR[13])
 
 # compute_errors_per_time("hull_white", "1Yr5YrSwap", "num_samples_4194304", save=True, plot=True)
 # compute_errors_per_time("cir", "1Yr5YrSwap", "num_samples_1048576", save=True, plot=True)
