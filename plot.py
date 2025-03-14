@@ -31,21 +31,25 @@ from src.test import convergence_num_train_samples, compute_errors_per_param,\
 
 
 
-# folder = os.path.join(os.getcwd(),"data","cir", "dataset-1Yr5YrSwap_2")
 # folder = os.path.join(os.getcwd(),"data","hull_white", "dataset-1Yr5YrSwap")
+folder = os.path.join(os.getcwd(),"data","cir", "dataset-1Yr5YrSwap_2")
 # folder = os.path.join(os.getcwd(),"data","hull_white", "dataset-portfolio_swaps")
-folder = os.path.join(os.getcwd(),"data","cir", "dataset-portfolio_swaps")
+# folder = os.path.join(os.getcwd(),"data","cir", "dataset-portfolio_swaps")
 ts = np.load(os.path.join(folder,"monitoring_times.npy"))
+var = np.load(os.path.join(folder,"estimated_variance.npy"))
 # xtrain = np.load(os.path.join(folder,"Xtrain.npy"))
-ytrain = np.load(os.path.join(folder,"IMtrain.npy"))
+# ytrain = np.load(os.path.join(folder,"IMtrain.npy"))
 # xval = np.load(os.path.join(folder,"Xval.npy"))
-yval = np.load(os.path.join(folder,"DIMval.npy"))
+# yval = np.load(os.path.join(folder,"DIMval.npy"))
 # print(np.where(np.isclose(ts, 1)))
 
-# print(ts.shape)
+print(var.shape)
 
 plt.figure(figsize=(12,8))
+plt.plot(ts, np.sqrt(var).T/np.sqrt(2**20))
 # plt.plot(ts,ytrain[501:2000].T)
 # plt.plot(ts,yval.T)
-plt.plot(ts,yval[:,:].T)
+# plt.plot(ts,yval[:,:].T)
 plt.show()
+
+print(np.max(np.sqrt(var).T/np.sqrt(2**20)))
