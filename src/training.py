@@ -64,7 +64,7 @@ class Train:
         self.nn_weights_path = os.path.join(self.nn_weights_path, self.dataset_name)
         os.makedirs(self.nn_weights_path, exist_ok=True)
         self.results_path = os.path.join(self.results_path, self.dataset_name)
-        os.makedirs(self.results_path)
+        os.makedirs(self.results_path, exist_ok=True)
 
 
     @classmethod
